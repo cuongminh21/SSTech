@@ -1,0 +1,35 @@
+@host = http://localhost:8080
+
+### 1. Get a development token
+# @name token
+POST {{host}}/api/v1/dev/token
+Content-Type: application/json
+
+### 2. Submit a valid transaction
+POST {{host}}/api/v1/partner/transactions
+Content-Type: application/json
+Authorization: Bearer {{token.response.body.access_token}}
+
+{
+  "partnerId": "P-1001",
+  "transactionReference": "TXN-99823",
+  "amount": 250.00,
+  "currency": "USD",
+  "timestamp": "2024-05-10T14:30:00Z"
+}
+
+### 3. Submit an invalid transaction (negative amount + bad currency)
+POST {{host}}/api/v1/partner/transactions
+Content-Type: application/json
+Authorization: Bearer {{token.response.body.access_token}}
+
+{
+  "partnerId": "P-1001",
+  "transactionReference": "TXN-1",
+  "amount": -5,
+  "currency": "XYZ",
+  "timestamp": "2024-05-10T14:30:00Z"
+}
+
+### 4. Hit the mock verification API directly (30% timeouts)
+GET {{host}}/api/v1/mock/partners/P-1001
