@@ -1,0 +1,45 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: partner-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # management UI (guest/guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [partner-net]
+
+  api:
+    build:
+      context: .
+      dockerfile: src/PartnerIntegration.Api/Dockerfile
+    container_name: partner-bff
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMq__Enabled: "true"
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: "5672"
+      # The mock verification API is hosted by this same service.
+      PartnerVerification__BaseUrl: http://localhost:8080
+      Jwt__SigningKey: dev-only-signing-key-please-replace-me-32bytes!
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [partner-net]
+
+networks:
+  partner-net:
+    driver: bridge
